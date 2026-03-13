@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>El Mapa Interior</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --oro:#c9a84c;--oro-s:#e8d5a3;
+  --fondo:#0f0d0a;--texto:#d4c9a8;
+  --gris:#6b6152;--gris-c:#8a7e65;
+}
+body{background:var(--fondo);color:var(--texto);font-family:Georgia,serif;min-height:100vh}
+
+/* PANTALLAS */
+.pantalla{display:none;min-height:100vh}
+.pantalla.activa{display:flex;flex-direction:column}
+
+/* PORTADA */
+#portada{align-items:center;justify-content:center;text-align:center;padding:48px 24px;
+  background:radial-gradient(ellipse at 50% 40%,#1e1508 0%,#0f0d0a 70%)}
+.port-sim{font-size:48px;margin-bottom:32px;opacity:0.55}
+.port-h1{font-size:clamp(36px,8vw,58px);color:var(--oro);font-weight:normal;letter-spacing:2px;line-height:1.2;margin-bottom:16px}
+.port-sub{font-style:italic;color:var(--gris-c);font-size:clamp(15px,2.5vw,18px);line-height:1.95;max-width:440px;margin-bottom:52px}
+
+/* MAPA */
+#mapa{padding:44px 20px 64px}
+.mapa-top{text-align:center;margin-bottom:44px}
+.mapa-sup{font-size:10px;letter-spacing:5px;text-transform:uppercase;color:var(--gris);margin-bottom:10px}
+.mapa-sub{font-style:italic;color:var(--gris-c);font-size:clamp(15px,2.5vw,17px);line-height:1.7}
+.semillas{display:flex;justify-content:center;gap:12px;margin-bottom:40px}
+.sem{width:8px;height:8px;border-radius:50%;background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.2);transition:all 0.5s}
+.sem.on{background:var(--oro);border-color:var(--oro)}
+.elementos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;max-width:860px;margin:0 auto}
+.elem-card{border:1px solid rgba(201,168,76,0.12);background:rgba(255,255,255,0.018);padding:32px 24px;cursor:pointer;transition:all 0.28s;position:relative;overflow:hidden}
+.elem-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ec);transform:scaleX(0);transform-origin:left;transition:transform 0.3s}
+.elem-card:hover{background:rgba(255,255,255,0.038);border-color:rgba(201,168,76,0.28)}
+.elem-card:hover::before{transform:scaleX(1)}
+.elem-card.visitada{opacity:0.32;pointer-events:none}
+.elem-card.visitada::after{content:'✓ recorrido';position:absolute;top:14px;right:16px;font-size:11px;color:var(--oro);letter-spacing:1px}
+.ec-sim{font-size:36px;margin-bottom:16px;opacity:0.7}
+.ec-elem{font-size:10px;letter-spacing:4px;text-transform:uppercase;color:var(--ec);margin-bottom:6px}
+.ec-nom{font-size:clamp(20px,3.5vw,26px);color:#ede0bf;font-weight:normal;margin-bottom:10px}
+.ec-desc{font-style:italic;color:var(--gris);font-size:14px;line-height:1.6}
+
+/* VIAJE */
+#viaje{padding:0}
+.step-wrap{max-width:600px;margin:0 auto;padding:48px 24px 80px;width:100%}
+.step-back{background:none;border:none;color:var(--gris);font-family:Georgia,serif;font-size:13px;cursor:pointer;padding:0;letter-spacing:1px;transition:color 0.2s;margin-bottom:44px;display:block}
+.step-back:hover{color:var(--oro)}
+.step-elem{font-size:10px;letter-spacing:5px;text-transform:uppercase;margin-bottom:8px}
+.step-sim{font-size:46px;margin-bottom:20px;opacity:0.65}
+.step-h{font-size:clamp(26px,5vw,38px);color:var(--oro);font-weight:normal;line-height:1.25;margin-bottom:10px}
+.step-arq{font-style:italic;color:var(--gris-c);font-size:15px;margin-bottom:36px}
+.raya{width:44px;height:1px;background:rgba(201,168,76,0.2);margin:28px 0}
+
+/* PREGUNTA DE ENTRADA */
+.entrada-preg{font-size:clamp(19px,3.5vw,24px);font-style:italic;color:#ede0bf;line-height:1.65;margin-bottom:28px}
+.opciones{display:flex;flex-direction:column;gap:11px}
+.opcion{background:transparent;border:1px solid rgba(201,168,76,0.15);color:var(--texto);font-family:Georgia,serif;font-size:clamp(15px,2.5vw,17px);padding:16px 20px;cursor:pointer;text-align:left;transition:all 0.22s;line-height:1.55}
+.opcion:hover{border-color:var(--oro);color:var(--oro-s);background:rgba(201,168,76,0.04)}
+.opcion .arr{color:var(--gris);margin-right:10px;transition:color 0.2s}
+.opcion:hover .arr{color:var(--oro)}
+
+/* SOMÁTICO */
+.somatico-box{margin:24px 0}
+.somatico-tag{display:inline-block;font-size:10px;letter-spacing:3px;text-transform:uppercase;padding:4px 12px;border:1px solid;margin-bottom:18px}
+.somatico-titulo{font-size:clamp(18px,3vw,22px);color:var(--oro-s);margin-bottom:14px;font-weight:normal;line-height:1.4}
+.somatico-por{font-size:clamp(15px,2.5vw,17px);color:var(--gris-c);line-height:1.85;margin-bottom:22px;font-style:italic}
+.somatico-pasos{font-size:clamp(15px,2.5vw,17px);color:var(--texto);line-height:2;margin-bottom:22px;white-space:pre-line}
+
+/* RESPIRACIÓN */
+.resp-centro{display:flex;flex-direction:column;align-items:center;margin:28px 0}
+.resp-circulo{width:130px;height:130px;border-radius:50%;border:1.5px solid rgba(201,168,76,0.35);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--oro);letter-spacing:2px;text-transform:uppercase;transition:transform 4s ease-in-out,opacity 1.2s;margin-bottom:16px;cursor:pointer}
+.resp-circulo.inhala{transform:scale(1.65);opacity:1}
+.resp-circulo.exhala{transform:scale(1);opacity:0.55}
+.resp-label{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--gris);margin-bottom:6px;text-align:center}
+.resp-num{font-size:38px;color:var(--oro);margin-bottom:20px;min-height:48px;text-align:center}
+.resp-dots{display:flex;gap:8px;justify-content:center;margin-bottom:24px}
+.resp-dot{width:7px;height:7px;border-radius:50%;background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.25);transition:background 0.4s}
+.resp-dot.hecho{background:var(--oro)}
+.resp-nota{font-style:italic;color:var(--gris-c);font-size:14px;text-align:center;max-width:380px;line-height:1.7;margin-top:8px}
+
+/* PREGUNTA CENTRAL */
+.pregunta-central{font-size:clamp(20px,3.8vw,28px);font-style:italic;color:#ede0bf;line-height:1.6;padding:28px 0;border-top:1px solid rgba(201,168,76,0.18);border-bottom:1px solid rgba(201,168,76,0.18);margin:12px 0 32px}
+.pregunta-nota{font-size:14px;color:var(--gris);font-style:italic;margin-bottom:28px;line-height:1.7}
+
+/* EJERCICIO */
+.ejercicio-box{background:rgba(255,255,255,0.025);border-left:2px solid;padding:22px 24px;margin:8px 0 24px}
+.ejercicio-tag{font-size:10px;letter-spacing:3px;text-transform:uppercase;margin-bottom:12px;opacity:0.8}
+.ejercicio-texto{font-size:clamp(15px,2.5vw,17px);color:var(--texto);line-height:1.9;white-space:pre-line}
+
+/* JOURNALING */
+.journal-preg{font-size:clamp(17px,3vw,21px);font-style:italic;color:#ede0bf;line-height:1.65;margin-bottom:18px}
+.journal-area{width:100%;min-height:160px;background:rgba(255,255,255,0.025);border:1px solid rgba(201,168,76,0.18);color:var(--texto);font-family:Georgia,serif;font-size:clamp(15px,2.5vw,17px);padding:16px;line-height:1.85;resize:vertical;transition:border-color 0.22s}
+.journal-area:focus{outline:none;border-color:rgba(201,168,76,0.42)}
+.journal-area::placeholder{color:var(--gris);font-style:italic}
+.journal-semillas{margin-top:20px}
+.journal-seed-label{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--gris);margin-bottom:10px}
+.journal-seed{font-style:italic;color:var(--gris-c);font-size:14px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;transition:color 0.2s;line-height:1.6}
+.journal-seed:hover{color:var(--oro-s)}
+.journal-seed::before{content:'✦  ';font-size:10px;color:var(--gris)}
+
+/* MÚSICA */
+.musica-box{border-left:2px solid var(--oro);padding:14px 18px;background:rgba(201,168,76,0.04);margin:16px 0 22px}
+.musica-label{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--oro);margin-bottom:6px}
+.musica-nom{font-size:clamp(15px,2.5vw,17px);color:var(--oro-s);margin-bottom:4px}
+.musica-link a{color:var(--gris-c);font-size:13px;font-style:italic}
+
+/* FRASES */
+.frase-territorio{font-size:clamp(17px,3vw,21px);font-style:italic;color:var(--gris-c);line-height:1.75;padding:22px 0;border-top:1px solid rgba(201,168,76,0.1)}
+
+/* BOTONES NAV */
+.nav-abajo{margin-top:36px;display:flex;flex-direction:column;gap:14px}
+.btn-sig{background:transparent;border:1px solid rgba(201,168,76,0.28);color:var(--oro);font-family:Georgia,serif;font-size:12px;letter-spacing:4px;text-transform:uppercase;padding:15px 32px;cursor:pointer;transition:all 0.25s;align-self:flex-start}
+.btn-sig:hover{background:rgba(201,168,76,0.07);border-color:var(--oro)}
+.btn-completar{background:transparent;border:1px solid rgba(201,168,76,0.2);color:var(--gris);font-family:Georgia,serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;padding:12px 24px;cursor:pointer;transition:all 0.25s;align-self:center;margin-top:8px}
+.btn-completar:hover{border-color:var(--oro);color:var(--oro)}
+
+/* TESORO */
+#tesoro{align-items:center;justify-content:center;text-align:center;padding:60px 24px;
+  background:radial-gradient(ellipse at 50% 40%,#1e1508 0%,#0f0d0a 70%)}
+.tesoro-w{max-width:520px}
+.tesoro-sim{font-size:56px;margin-bottom:28px;opacity:0.65}
+.tesoro-h{font-size:clamp(26px,5vw,40px);color:var(--oro);font-weight:normal;margin-bottom:24px}
+.tesoro-p{font-size:clamp(16px,2.5vw,19px);font-style:italic;color:var(--gris-c);line-height:1.9;margin-bottom:16px}
+.tesoro-preg{font-size:clamp(19px,3.5vw,25px);font-style:italic;color:#ede0bf;line-height:1.65;padding:28px 0;border-top:1px solid rgba(201,168,76,0.2);border-bottom:1px solid rgba(201,168,76,0.2);margin:28px 0}
+</style>
+</head>
+<body>
+
+<!-- PORTADA -->
+<div id="portada" class="pantalla activa">
+  <div class="port-sim">✦</div>
+  <h1 class="port-h1">El Mapa<br>Interior</h1>
+  <p class="port-sub">Cuatro elementos.<br>Cuatro territorios de ti misma.<br><br>No hay respuestas correctas.<br>No hay orden obligatorio.<br>Solo tú, eligiendo el camino.</p>
+  <button class="btn-sig" onclick="ir('mapa')">Abrir el mapa</button>
+</div>
+
+<!-- MAPA -->
+<div id="mapa" class="pantalla">
+  <div style="max-width:860px;margin:0 auto;padding:44px 20px 64px;width:100%">
+    <div class="mapa-top">
+      <div class="mapa-sup">✦ El Mapa ✦</div>
+      <p class="mapa-sub">¿Qué elemento te llama ahora?</p>
+    </div>
+    <div class="semillas" id="semillas"></div>
+    <div class="elementos-grid" id="elementos-grid"></div>
+  </div>
+</div>
+
+<!-- VIAJE -->
+<div id="viaje" class="pantalla">
+  <div class="step-wrap" id="step-wrap"></div>
+</div>
+
+<!-- TESORO -->
+<div id="tesoro" class="pantalla">
+  <div class="tesoro-w">
+    <div class="tesoro-sim">✦</div>
+    <h2 class="tesoro-h">Los cuatro elementos<br>te han hablado</h2>
+    <p class="tesoro-p">Has respirado, sentido, escrito.<br>Has estado presente contigo misma.</p>
+    <p class="tesoro-p">La brújula no estaba rota.<br>Solo necesitaba que bajaras el ruido<br>para volver a escucharla.</p>
+    <div class="tesoro-preg">Si tu vida del próximo año<br>estuviera alineada con tu norte —<br>¿cómo se sentiría un martes cualquiera?</div>
+    <p style="font-size:14px;color:var(--gris);margin-bottom:32px">Escríbelo. Imperfecto. Real. Tuyo.</p>
+    <button class="btn-sig" onclick="reiniciar()">Volver al mapa</button>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// DATOS
+// ════════════════════════════════════════════════════════
+const MAPA = [
+  // ─────────────────────────────────────────────────────
+  // TIERRA
+  // ─────────────────────────────────────────────────────
+  {
+    id:'tierra', sim:'🌍', elem:'Tierra', nom:'El Peso', color:'#8b6914',
+    arq:'Lo que cargas · Lo que sueltas',
+    desc:'Para integrar lo vivido. Para dejar ir lo que ya no eres.',
+    entradaPreg:'¿Qué sientes que llevas contigo ahora mismo?',
+    caminos:[
+      {
+        txt:'Cansancio. Como si cargara con demasiado.',
+        somatico:{
+          tag:'Respiración de soltar',
+          color:'#8b6914',
+          titulo:'Antes de mirar qué cargas, el cuerpo necesita soltar.',
+          por:'Cuando llevamos demasiado, el sistema nervioso está en modo supervivencia. Esta respiración activa el freno parasimpático — la señal de que puedes bajar la guardia.',
+          pasos:'Siéntate con la espalda apoyada.\nPon las manos sobre los muslos, palmas hacia arriba.\n\nInhala 4 tiempos · Retén 2 · Exhala lenta 8 tiempos · Pausa 2\n\nCon cada exhala larga, imagina que depositas algo pesado en el suelo.\nNo lo resuelves. Solo lo dejas ahí.',
+          patron:{i:4,r:2,e:8,p:2,c:5},
+          nota:'Cuando termines, observa si algo en el cuerpo ha bajado aunque sea un poco.'
+        },
+        pregunta:'¿Qué estás tolerando en tu vida que en realidad ya no quieres tolerar?',
+        pregNota:'No busques la respuesta perfecta. Deja que el cuerpo te diga primero.',
+        ejercicio:{
+          tag:'Escritura sin filtro',
+          color:'#8b6914',
+          texto:'Haz dos listas rápidas en un papel:\n\n→ Lo que me drena y ya no quiero\n→ Lo que me nutre y quiero proteger\n\nNo las pienses. Escribe lo primero que llegue.\nCinco minutos. Sin corregir.'
+        },
+        journalPreg:'¿Qué sería diferente en tu vida si dejaras de tolerar una sola de esas cosas?',
+        journalPlaceholder:'Si dejara de tolerar...',
+        semillas:['Lo que más me agota es...','Llevo tiempo cargando algo que no es mío: ...','Lo que más quiero dejar atrás del último año es...','Si pudiera soltar una sola cosa hoy, sería...'],
+        musica:{nom:'Earth Meditation — Grounding Sounds',url:'https://open.spotify.com/playlist/37i9dQZF1DWZeKCadgRdKQ'}
+      },
+      {
+        txt:'Confusión. No sé muy bien quién soy ahora.',
+        somatico:{
+          tag:'Anclaje al cuerpo',
+          color:'#8b6914',
+          titulo:'Cuando no sabes quién eres, el cuerpo sí sabe dónde estás.',
+          por:'La confusión de identidad desconecta la mente del cuerpo. Este ejercicio te ancla al presente — no para resolver la confusión, sino para crear una base segura desde la que mirar.',
+          pasos:'De pie o sentada con los pies en el suelo.\nSiente el contacto de los pies con la tierra. Aprieta un poco, suelta.\n\nNombra en voz baja o mental:\n5 cosas que ves · 4 que sientes en el cuerpo · 3 que oyes · 2 que hueles · 1 que sabes que es verdad ahora mismo.\n\nTermina con tres respiraciones largas.',
+          patron:null,
+          nota:'Este ejercicio no resuelve nada. Solo te devuelve al presente, que es el único lugar desde donde puedes escucharte.'
+        },
+        pregunta:'¿Qué partes de ti del último año y medio han muerto — y cuáles han nacido?',
+        pregNota:'Las transiciones siempre son pérdida y nacimiento al mismo tiempo.',
+        ejercicio:{
+          tag:'Mapa de identidad',
+          color:'#8b6914',
+          texto:'Coge un papel. Dibuja un círculo en el centro — eso eres tú.\n\nFuera del círculo: escribe las identidades o roles que sientes que ya no te pertenecen.\nDentro del círculo: escribe lo que sientes que sí sigue siendo tuyo.\n\nNo tienes que tenerlo claro. El dibujo te lo irá diciendo.'
+        },
+        journalPreg:'¿Qué parte de ti que creías perdida en realidad solo estaba esperando?',
+        journalPlaceholder:'Lo que creía haber perdido y en realidad...',
+        semillas:['Antes me definía por... ahora me pregunto si...','Lo que sí sé que soy, aunque todo lo demás sea confuso, es...','La versión de mí que está naciendo se parece a...','Lo que me cuesta reconocer que ha cambiado en mí es...'],
+        musica:{nom:'Grounding — Deep Ambient',url:'https://open.spotify.com/playlist/37i9dQZF1DX9uKNf5jGX6m'}
+      },
+      {
+        txt:'Tristeza o duelo. Algo terminó y no lo he procesado del todo.',
+        somatico:{
+          tag:'Respiración de compasión',
+          color:'#8b6914',
+          titulo:'El duelo necesita espacio, no solución.',
+          por:'Cuando algo termina — un trabajo, una etapa, una versión de ti — el sistema nervioso necesita llorar ese fin. Esta respiración crea un espacio seguro para que lo que está dentro pueda salir.',
+          pasos:'Pon una mano en el pecho y otra en el vientre.\nCierra los ojos si puedes.\n\nInhala 5 tiempos hacia el vientre · Exhala 7 tiempos muy despacio.\n\nCon cada inhala: recíbete como estás.\nCon cada exhala: suelta un poco de la exigencia de estar bien.\n\nRepite 6 veces. Si algo quiere salir, déjalo.',
+          patron:{i:5,r:0,e:7,p:2,c:6},
+          nota:'No hace falta entender qué estás llorando. El cuerpo sabe.'
+        },
+        pregunta:'¿Qué has perdido en el último año y medio que todavía no te has permitido llorar?',
+        pregNota:'No solo las pérdidas grandes. También las pequeñas.',
+        ejercicio:{
+          tag:'Carta de despedida',
+          color:'#8b6914',
+          texto:'Escríbele una carta a algo o alguien que se fue — una etapa, una versión de ti, un trabajo, una expectativa.\n\nEmpieza así:\n\n«Quiero que sepas que lo que viví contigo fue real.\nY que me cuesta soltarte porque...»\n\nDeja que fluya. No tiene que ser bonita.'
+        },
+        journalPreg:'¿Qué quieres que permanezca de todo lo que ha terminado?',
+        journalPlaceholder:'Lo que no quiero perder aunque esa etapa haya cerrado es...',
+        semillas:['Lo que más me duele reconocer que terminó es...','Lo que gané en esa etapa que nadie me puede quitar es...','El aprendizaje más duro del último año ha sido...','Ahora que eso ha pasado, lo que quiero construir es...'],
+        musica:{nom:'Healing & Release — Soft Piano',url:'https://open.spotify.com/playlist/37i9dQZF1DX3YSRoSdA634'}
+      },
+      {
+        txt:'Algo se está moviendo pero no sé bien qué es.',
+        somatico:{
+          tag:'Escucha corporal',
+          color:'#8b6914',
+          titulo:'Antes de saber qué se mueve, necesitas oírlo.',
+          por:'Cuando algo está emergiendo pero no tiene nombre todavía, intentar pensarlo lo bloquea. El cuerpo lo sabe antes que la mente. Este ejercicio te enseña a escucharlo.',
+          pasos:'Túmbate o siéntate cómodamente.\nCierra los ojos. Respira con normalidad.\n\nHaz un scan lento de arriba a abajo:\n¿Dónde hay tensión? ¿Dónde hay calor? ¿Dónde hay vacío?\n¿Hay alguna zona que llame la atención sin saber por qué?\n\nQuédate con esa zona 2 minutos. Sin interpretar.\nSolo observando.\n\nDespués pregúntale a esa zona: «¿Qué quieres decirme?»',
+          patron:null,
+          nota:'No hace falta que llegue una respuesta en palabras. A veces llega una imagen, un color, una sensación.'
+        },
+        pregunta:'Si lo que se está moviendo en ti pudiera hablar, ¿qué diría?',
+        pregNota:'Escribe sin pensar. Deja que salga lo que sea.',
+        ejercicio:{
+          tag:'Escritura automática · 10 min',
+          color:'#8b6914',
+          texto:'Pon un temporizador de 10 minutos.\nEmpieza a escribir sin parar, sin levantar el bolígrafo o sin borrar.\n\nEmpieza con: «Lo que se está moviendo en mí es...»\n\nNo corrijas. No pienses. Si te quedas en blanco, escribe «no sé» hasta que llegue algo.\n\nCuando suene el temporizador, subraya lo que más te sorprende de lo que ha salido.'
+        },
+        journalPreg:'¿Qué frase de lo que has escrito sientes que es más verdadera?',
+        journalPlaceholder:'La frase que más me resuena es...',
+        semillas:['Lo que noto que quiere cambiar en mí es...','La señal más pequeña que me está dando el cuerpo es...','Si le diera nombre a lo que se mueve, sería...','Lo que todavía no me atrevo a decir en voz alta es...'],
+        musica:{nom:'Deep Listening — Ambient Meditation',url:'https://open.spotify.com/playlist/37i9dQZF1DWZMCPgYjgDzU'}
+      }
+    ]
+  },
+
+  // ─────────────────────────────────────────────────────
+  // AGUA
+  // ─────────────────────────────────────────────────────
+  {
+    id:'agua', sim:'🌊', elem:'Agua', nom:'El Río', color:'#3a7bd5',
+    arq:'Lo que sientes · Lo que anhelas',
+    desc:'Para escucharte de verdad. Para entender qué quieres en los vínculos y en ti misma.',
+    entradaPreg:'¿Qué necesitas escuchar de ti misma ahora mismo?',
+    caminos:[
+      {
+        txt:'Que estoy bien aunque no lo parezca.',
+        somatico:{
+          tag:'Respiración de autocompasión',
+          color:'#3a7bd5',
+          titulo:'Antes de decirte que estás bien, el cuerpo necesita sentirlo.',
+          por:'El sistema nervioso no distingue si la amenaza es externa o interna — la autocrítica lo activa igual que el peligro. Esta respiración envía la señal opuesta: estás a salvo contigo misma.',
+          pasos:'Pon una mano en el pecho y siente el calor.\nLa otra mano en el vientre.\n\nInhala 4 tiempos · Exhala 6 tiempos\n\nCon cada inhala di mentalmente: «Me recibo como estoy».\nCon cada exhala: «Puedo soltar la exigencia».\n\nRepite 6 veces. No hace falta creerlo al principio.',
+          patron:{i:4,r:0,e:6,p:2,c:6},
+          nota:'La autocompasión no es resignación. Es la base desde la que se puede crecer.'
+        },
+        pregunta:'¿Qué te dirías ahora mismo si fueras tu mejor amiga?',
+        pregNota:'No lo que deberías decirte. Lo que le dirías a alguien que quieres mucho.',
+        ejercicio:{
+          tag:'Carta desde el amor',
+          color:'#3a7bd5',
+          texto:'Escríbete una carta como si fueras tu mejor amiga — la que te conoce de verdad y te quiere sin condiciones.\n\nEmpieza así:\n\n«Mira, necesito que sepas algo sobre ti que no estás viendo...\n\nLo que más admiro de ti ahora mismo, aunque no lo veas, es...»\n\nSé generosa. Sé honesta. Sé amorosa.'
+        },
+        journalPreg:'¿Qué parte de lo que has escrito necesitas creer más?',
+        journalPlaceholder:'Lo que más me cuesta creer de mí misma es...',
+        semillas:['Lo que haría si me tratara con la misma amabilidad que a mis amigas es...','Lo que me estoy negando que merezco es...','Si me diera permiso para estar bien en este momento, sentiría...','Lo que quiero proteger de mí misma en esta etapa es...'],
+        musica:{nom:'Self Compassion — Gentle Piano',url:'https://open.spotify.com/playlist/37i9dQZF1DX3YSRoSdA634'}
+      },
+      {
+        txt:'Qué quiero de verdad en el amor y la conexión.',
+        somatico:{
+          tag:'Visualización del vínculo',
+          color:'#3a7bd5',
+          titulo:'El cuerpo sabe qué tipo de amor lo expande y cuál lo contrae.',
+          por:'El anhelo de conexión no siempre tiene palabras. Antes de pensarlo, déjalo sentir. El cuerpo sabe distinguir entre el vínculo que te alimenta y el que te vacía.',
+          pasos:'Cierra los ojos. Respira despacio 3 veces.\n\nImagina a alguien — real o imaginado — cuya presencia te hace sentir completamente a salvo y completamente tú misma.\n\nObserva cómo se siente el cuerpo con esa presencia:\n¿Dónde notas expansión? ¿Dónde hay calor?\n\nQuédate con esa sensación 3 minutos.\nEso es tu referencia.',
+          patron:null,
+          nota:'No pienses en personas concretas de tu vida todavía. Primero siente qué quieres.'
+        },
+        pregunta:'¿Qué tipo de presencia quieres en tu vida que ahora no tienes?',
+        pregNota:'No solo pareja. También amistad, comunidad, encuentro.',
+        ejercicio:{
+          tag:'Cartografía del vínculo',
+          color:'#3a7bd5',
+          texto:'Dibuja tres círculos concéntricos. En el centro: tú.\n\nPrimer círculo: las personas con las que sientes que puedes ser completamente tú.\nSegundo: las que te importan pero con las que llevas máscara.\nTercero: las que te drenan pero sigues sosteniendo.\n\nObserva el dibujo. ¿Qué ves?'
+        },
+        journalPreg:'¿Qué tipo de vínculo quieres construir en los próximos años?',
+        journalPlaceholder:'La conexión que anhelo se siente como...',
+        semillas:['Lo que busco en una persona y raramente encuentro es...','El tipo de comunidad que me haría sentir en casa sería...','Llevo tiempo queriendo decirle a alguien...','Lo que más me importa en un vínculo ahora mismo es...'],
+        musica:{nom:'Water Meditation — Ocean Sounds',url:'https://open.spotify.com/playlist/37i9dQZF1DWZeKCadgRdKQ'}
+      },
+      {
+        txt:'Si me estoy traicionando en algo.',
+        somatico:{
+          tag:'Scan de autenticidad',
+          color:'#3a7bd5',
+          titulo:'El cuerpo registra la traición antes que la mente la reconoce.',
+          por:'Cuando nos traicionamos — decimos que sí cuando queremos decir no, seguimos en algo que ya no nos corresponde — el cuerpo lo guarda. Este scan te ayuda a localizar dónde.',
+          pasos:'Siéntate con la espalda recta.\nCierra los ojos. Respira 4 veces.\n\nRecorre mentalmente estas áreas de tu vida:\nTrabajo · Dinero · Relaciones · Tiempo · Energía · Cuerpo\n\nPara cada una pregunta en silencio: «¿Estoy siendo honesta conmigo aquí?»\n\nNo analices. Solo nota si hay contracción o apertura en el pecho.',
+          patron:null,
+          nota:'La contracción es información, no culpa.'
+        },
+        pregunta:'¿En qué área de tu vida estás actuando desde el miedo en lugar de desde tu verdad?',
+        pregNota:'Responde a lo que ha llegado durante el scan, no a lo que crees que deberías decir.',
+        ejercicio:{
+          tag:'Diálogo con tu verdad',
+          color:'#3a7bd5',
+          texto:'Escribe un diálogo entre tú y la parte de ti que sabe la verdad.\n\nTú: «¿En qué me estoy traicionando?»\nVerdad: «...»\nTú: «¿Y qué necesitaría para no hacerlo?»\nVerdad: «...»\n\nNo lo pienses. Deja que la verdad hable primero.'
+        },
+        journalPreg:'¿Cuál sería el siguiente paso más pequeño y verdadero?',
+        journalPlaceholder:'Si fuera completamente honesta conmigo, lo que cambiaría es...',
+        semillas:['Lo que sigo haciendo aunque sé que ya no me corresponde es...','La situación en la que más me callo es...','Lo que quiero decir en voz alta y todavía no me atrevo es...','Si me diera permiso para ser completamente honesta, haría...'],
+        musica:{nom:'Inner Truth — Tibetan Bowls',url:'https://open.spotify.com/playlist/37i9dQZF1DX9uKNf5jGX6m'}
+      },
+      {
+        txt:'Qué tipo de comunidad y pertenencia quiero.',
+        somatico:{
+          tag:'Respiración expansiva',
+          color:'#3a7bd5',
+          titulo:'El anhelo de pertenencia vive en el pecho. Ábrelo primero.',
+          por:'El sentido de pertenencia — sentirse parte de algo — activa los circuitos de seguridad del sistema nervioso. Esta respiración abre el pecho y prepara el cuerpo para imaginar ese espacio.',
+          pasos:'Siéntate o túmbate. Brazos ligeramente abiertos.\n\nInhala 6 tiempos expandiendo el pecho al máximo.\nRetén 2 · Exhala 6 soltando los hombros.\n\nImagina con cada inhala que tu pecho hace espacio para algo que quieres.\nCon cada exhala, suelta la soledad que has cargado.\n\nRepite 5 veces.',
+          patron:{i:6,r:2,e:6,p:0,c:5},
+          nota:'El tipo de comunidad que imaginas durante este ejercicio suele ser el que más necesitas.'
+        },
+        pregunta:'¿Dónde y con quién te sientes más tú misma — y cuánto de eso tienes ahora en tu vida?',
+        pregNota:'Sin juzgar lo que hay. Solo viendo la distancia entre lo que quieres y lo que tienes.',
+        ejercicio:{
+          tag:'Collage mental',
+          color:'#3a7bd5',
+          texto:'Cierra los ojos e imagina la escena:\n\nEstás en un lugar con personas. Te sientes completamente a gusto.\n\nObserva: ¿Dónde estáis? ¿Cuántos sois? ¿Qué estáis haciendo?\n¿Qué tipo de conversaciones hay? ¿Qué ritmo tiene ese espacio?\n\nCuando lo tengas claro, descríbelo con todo el detalle que puedas.'
+        },
+        journalPreg:'¿Qué necesitarías para tener más de eso en tu vida cotidiana?',
+        journalPlaceholder:'La comunidad que quiero se siente como...',
+        semillas:['El tipo de personas con las que quiero pasar más tiempo son...','Los espacios donde me siento más yo son...','Lo que más echo de menos en mis relaciones actuales es...','La tribu que estoy buscando se reconoce en que...'],
+        musica:{nom:'Community — World Music Ambient',url:'https://open.spotify.com/playlist/37i9dQZF1DWZMCPgYjgDzU'}
+      }
+    ]
+  },
+
+  // ─────────────────────────────────────────────────────
+  // FUEGO
+  // ─────────────────────────────────────────────────────
+  {
+    id:'fuego', sim:'🔥', elem:'Fuego', nom:'La Llama', color:'#c05621',
+    arq:'Tu energía · Tu dirección',
+    desc:'Para entender qué te enciende. Para orientar tu carrera y propósito.',
+    entradaPreg:'¿Dónde sientes que está tu energía ahora mismo?',
+    caminos:[
+      {
+        txt:'Apagada. No sé qué me enciende ya.',
+        somatico:{
+          tag:'Respiración activadora',
+          color:'#c05621',
+          titulo:'No puedes encender el fuego forzándolo. Primero hay que avivar las brasas.',
+          por:'El agotamiento profesional apaga la conexión con el deseo. Esta respiración activa el sistema nervioso simpático de forma suave — no para excitar, sino para recordarle al cuerpo que puede encenderse.',
+          pasos:'Siéntate erguida. Manos en los muslos.\n\nInhala rápido por la nariz 2 tiempos · Exhala rápido por la boca 2 tiempos.\nRepite este ritmo corto 10 veces.\n\nLuego 3 respiraciones normales y largas.\n\nRepite el ciclo 3 veces.',
+          patron:null,
+          nota:'Después de la última respiración, quédate en silencio y observa qué aparece.'
+        },
+        pregunta:'¿En qué momentos de tu trayectoria profesional te has sentido más viva — aunque sean recuerdos lejanos?',
+        pregNota:'No el cargo. No el sueldo. El momento en sí. Lo que estabas haciendo.',
+        ejercicio:{
+          tag:'Arqueología del fuego',
+          color:'#c05621',
+          texto:'Escribe todos los momentos profesionales donde el tiempo se fue sin sentir.\n\nPueden ser pequeños. Una reunión que salió bien. Un problema que resolviste. Una conversación que dejó huella.\n\nDespués busca el patrón: ¿qué tienen en común? ¿Qué tipo de actividad, qué tipo de relación, qué tipo de reto?'
+        },
+        journalPreg:'¿Qué tipo de trabajo te despertaría el fuego si supieras que no puedes fallar?',
+        journalPlaceholder:'Lo que me encendía antes y quiero recuperar es...',
+        semillas:['El tipo de problema que me gusta resolver de verdad es...','Me siento más viva cuando mi trabajo involucra...','Lo que haría aunque no me pagaran por ello es...','La última vez que el tiempo desapareció trabajando fue cuando...'],
+        musica:{nom:'Fire Meditation — Drumming & Beats',url:'https://open.spotify.com/playlist/37i9dQZF1DWTvNyxOwkztu'}
+      },
+      {
+        txt:'Dispersa. Hay muchas cosas pero ninguna tira fuerte.',
+        somatico:{
+          tag:'Respiración de centrado',
+          color:'#c05621',
+          titulo:'La dispersión es energía sin dirección. Primero hay que reunirla.',
+          por:'Cuando hay muchas opciones, el sistema nervioso entra en modo escaneo constante. Esta respiración crea un centro de gravedad — un punto desde el que elegir sin que todo compita al mismo tiempo.',
+          pasos:'Pon ambas manos sobre el ombligo.\nCierra los ojos.\n\nInhala 4 tiempos imaginando que la energía dispersa vuelve al centro de tu cuerpo.\nRetén 4 · Exhala 6 soltando la tensión de tener que elegir.\nPausa 2.\n\nRepite 5 veces. Siente cómo con cada ciclo algo se ordena.',
+          patron:{i:4,r:4,e:6,p:2,c:5},
+          nota:'Después pregúntate: si solo pudiera hacer una cosa, ¿cuál elegiría?'
+        },
+        pregunta:'Si tuvieras que apostar por una sola dirección los próximos 12 meses, ¿cuál te pediría menos esfuerzo para arrancar?',
+        pregNota:'No la más importante. La que tiene menos rozamiento desde donde estás.',
+        ejercicio:{
+          tag:'Test de energía',
+          color:'#c05621',
+          texto:'Escribe en un papel cada opción que estás considerando.\n\nPara cada una, pon la mano en el pecho y di el nombre en voz alta.\n\nObserva si hay apertura o contracción. Si hay energía o plomo.\n\nNo analices. Solo registra lo que el cuerpo dice para cada una.'
+        },
+        journalPreg:'¿Qué te dice el cuerpo que no te está diciendo la cabeza?',
+        journalPlaceholder:'Cuando pienso en la opción que más me asusta, en realidad lo que siento es...',
+        semillas:['La opción que me genera más curiosidad aunque me dé miedo es...','Lo que me frena de elegir una dirección es...','Si un año fuera suficiente para probar algo, probaría...','La dirección que más me parecería mía, aunque no sé si funcionará, es...'],
+        musica:{nom:'Focus & Clarity — Binaural Beats',url:'https://open.spotify.com/playlist/37i9dQZF1DWZeKCadgRdKQ'}
+      },
+      {
+        txt:'Clara en algo pero con miedo a que no funcione económicamente.',
+        somatico:{
+          tag:'Respiración 4-7-8 · Seguridad',
+          color:'#c05621',
+          titulo:'El miedo económico activa el cerebro de escasez. Primero hay que desactivarlo.',
+          por:'El miedo a no tener suficiente es uno de los miedos más primitivos. Cuando está activo, no puedes pensar con claridad ni ver opciones. Esta respiración regula el sistema nervioso y lo saca del modo amenaza.',
+          pasos:'Siéntate con la espalda recta.\nLengua en el paladar.\n\nInhala por la nariz 4 tiempos.\nRetén el aire 7 tiempos.\nExhala por la boca 8 tiempos haciendo un sonido suave.\n\nRepite 4 veces. No más — es potente.',
+          patron:{i:4,r:7,e:8,p:0,c:4},
+          nota:'Después pregúntate: ¿el miedo que siento es real o anticipado?'
+        },
+        pregunta:'¿Cuánto es suficiente realmente para ti — y qué tan lejos o cerca estás de poder conseguirlo desde lo que ya sabes hacer?',
+        pregNota:'No el número ideal. El número real de mínimos dignos para ti.',
+        ejercicio:{
+          tag:'Mapa de capitalización',
+          color:'#c05621',
+          texto:'Escribe en un papel tres columnas:\n\n→ Lo que sé hacer y puedo ofrecer hoy\n→ A quién le resulta valioso\n→ Qué forma podría tomar (proyecto, servicio, empleo)\n\nNo busques el proyecto perfecto. Solo mapea lo que ya tienes.\n\nTu trayectoria en ciberseguridad, compliance, liderazgo, creación de estructuras humanas — todo eso tiene mercado. ¿En qué formato te sientes más tú?'
+        },
+        journalPreg:'¿Qué pasaría si dejaras de esperar tener todo claro antes de dar el primer paso?',
+        journalPlaceholder:'Si supiera que en 12 meses podría sostenerme económicamente, empezaría por...',
+        semillas:['Lo que ya sé hacer y todavía no he capitalizado bien es...','El tipo de cliente o proyecto que me gustaría tener es...','La forma de trabajar que más me gustaría es...','El miedo económico que más me paraliza es... y lo que en realidad necesitaría es...'],
+        musica:{nom:'Abundance Mindset — Calm Focus',url:'https://open.spotify.com/playlist/37i9dQZF1DX4sWSpwq3LiO'}
+      },
+      {
+        txt:'Sé lo que quiero pero no sé cómo empezar.',
+        somatico:{
+          tag:'Respiración de acción',
+          color:'#c05621',
+          titulo:'Saber sin actuar crea tensión. El cuerpo necesita soltar esa tensión primero.',
+          por:'Cuando sabes qué quieres pero no te mueves, hay una disonancia que el cuerpo carga como tensión crónica. Esta respiración activa el impulso de acción de forma regulada — no impulsiva, sino fluida.',
+          pasos:'De pie si puedes. Sacude las manos 30 segundos.\n\nDespués, 5 respiraciones:\nInhala 4 tiempos llevando los brazos hacia arriba.\nExhala 4 tiempos bajando los brazos con fuerza, como si soltaras algo.\n\nAl terminar, quédate quieta y observa qué ha cambiado.',
+          patron:null,
+          nota:'La acción no tiene que ser perfecta. Solo tiene que ser la siguiente más pequeña.'
+        },
+        pregunta:'¿Cuál es el paso más pequeño y más concreto que podrías dar esta semana — sin tenerlo todo claro?',
+        pregNota:'No el plan. El primer paso. Solo ese.',
+        ejercicio:{
+          tag:'El siguiente paso más pequeño',
+          color:'#c05621',
+          texto:'Escribe lo que quieres.\n\nDespués pregúntate: ¿Qué necesitaría para que esto existiera?\nEscribe todas las respuestas.\n\nAhora tacha todo lo que no depende de ti o no puedes hacer esta semana.\n\nDe lo que queda: ¿Cuál es la cosa más pequeña que sí puedes hacer?\n\nEse es tu siguiente paso.'
+        },
+        journalPreg:'¿Qué excusa llevas más tiempo usando para no dar ese paso?',
+        journalPlaceholder:'El paso que llevo tiempo posponiendo es... y la razón real por la que no lo doy es...',
+        semillas:['Lo que sé que quiero y todavía no me permito ir a por ello es...','El primer paso tan pequeño que no puedo no darlo es...','Lo que necesitaría saber o tener para sentirme lista es... ¿y si nunca lo tuviera del todo?','Si diera ese paso y saliera bien, mi vida en 6 meses se parecería a...'],
+        musica:{nom:'Motivation — Uplifting Instrumental',url:'https://open.spotify.com/playlist/37i9dQZF1DWZMCPgYjgDzU'}
+      }
+    ]
+  },
+
+  // ─────────────────────────────────────────────────────
+  // AIRE
+  // ─────────────────────────────────────────────────────
+  {
+    id:'aire', sim:'🌬️', elem:'Aire', nom:'El Vuelo', color:'#5a8a3c',
+    arq:'Tu norte · Tu libertad',
+    desc:'Para entender qué quieres internamente. Para orientar tu brújula.',
+    entradaPreg:'¿Qué sientes cuando imaginas tu vida en los próximos años?',
+    caminos:[
+      {
+        txt:'Vértigo. La libertad me asusta tanto como la jaula.',
+        somatico:{
+          tag:'Respiración de anclaje',
+          color:'#5a8a3c',
+          titulo:'El vértigo ante la libertad necesita raíces primero.',
+          por:'La libertad sin estructura puede sentirse como caída libre. El sistema nervioso necesita sentirse anclado antes de poder imaginar el vuelo. Este ejercicio crea esas raíces.',
+          pasos:'De pie, descalza si puedes.\nSiente el suelo bajo los pies. Aprieta con toda la planta.\n\nInhala 4 tiempos imaginando que echas raíces por las plantas de los pies.\nRetén 2 · Exhala 6 soltando la tensión de los hombros.\n\nRepite 6 veces. Con cada ciclo, las raíces van más profundo.\n\nPregúntate: ¿desde qué raíz quiero volar?',
+          patron:{i:4,r:2,e:6,p:0,c:6},
+          nota:'La libertad sostenible necesita una base. ¿Cuál es la tuya?'
+        },
+        pregunta:'¿Qué tipo de estructura te da libertad — en lugar de quitártela?',
+        pregNota:'No toda estructura aprisiona. Algunas son las que te permiten volar.',
+        ejercicio:{
+          tag:'Mapa de libertad y estructura',
+          color:'#5a8a3c',
+          texto:'Dibuja dos columnas:\n\n→ Estructuras que me han aprisionado (y por qué)\n→ Estructuras que me han dado libertad (y por qué)\n\nObserva la diferencia. ¿Qué tienen en común las que te liberan?\n\nEso es la estructura que necesitas construir.'
+        },
+        journalPreg:'¿Qué tipo de vida cotidiana te daría tanto estructura como libertad?',
+        journalPlaceholder:'La vida que quiero se organiza así...',
+        semillas:['La estructura que me daría más libertad sería...','Lo que más me asusta de no tener un marco fijo es...','El equilibrio que quiero entre libertad y seguridad es...','Si pudiera diseñar mi semana ideal sin restricciones, sería...'],
+        musica:{nom:'Freedom — Open Sky Ambient',url:'https://open.spotify.com/playlist/37i9dQZF1DX9uKNf5jGX6m'}
+      },
+      {
+        txt:'Hay algo que deseo pero no me permito admitir.',
+        somatico:{
+          tag:'Visualización del permiso',
+          color:'#5a8a3c',
+          titulo:'Lo que no te permites desear vive en el cuerpo como contracción.',
+          por:'Cuando censuramos un deseo — porque parece demasiado, poco práctico, egoísta — el cuerpo lo guarda como tensión. Esta visualización crea un espacio seguro para que ese deseo aparezca sin ser juzgado.',
+          pasos:'Cierra los ojos. Respira 4 veces.\n\nImagina que estás sola en un espacio donde nadie te juzga.\nNo hay consecuencias. No hay expectativas.\n\nDeja que aparezca lo que quieres de verdad.\nNo lo analices. Solo obsérvalo.\n\n¿Qué forma tiene? ¿Qué emoción trae?\n\nQuédate con eso 3 minutos.',
+          patron:null,
+          nota:'El deseo que más asusta suele ser el más verdadero.'
+        },
+        pregunta:'Si no existiera el miedo al qué dirán y el miedo económico, ¿qué vida empezarías a construir?',
+        pregNota:'No para mañana. Solo para ver qué quieres de verdad.',
+        ejercicio:{
+          tag:'La vida sin permiso',
+          color:'#5a8a3c',
+          texto:'Escribe durante 10 minutos sin parar sobre la vida que quieres y que todavía no te permites admitir.\n\nEmpieza así:\n\n«Si pudiera elegir sin restricciones, mi vida se parecería a...»\n\nNo lo corrijas. No lo hagas razonable. Deja que sea tan grande o tan pequeño como quiera ser.'
+        },
+        journalPreg:'¿Qué parte de eso es alcanzable más pronto de lo que crees?',
+        journalPlaceholder:'Lo que quiero y no me permito admitir es...',
+        semillas:['Lo que haría si supiera que no puedo fallar es...','El tipo de vida que me imagino cuando me dejo soñar es...','Lo que más me frena de perseguir lo que quiero de verdad es...','Si me diera permiso para querer lo que quiero, el primer cambio sería...'],
+        musica:{nom:'Dreams — Ethereal Ambient',url:'https://open.spotify.com/playlist/37i9dQZF1DWZeKCadgRdKQ'}
+      },
+      {
+        txt:'Demasiadas opciones. No sé por dónde orientarme.',
+        somatico:{
+          tag:'Respiración de claridad',
+          color:'#5a8a3c',
+          titulo:'La claridad no llega pensando más. Llega cuando el ruido baja.',
+          por:'Con demasiadas opciones, el córtex prefrontal colapsa. Esta respiración activa las ondas alfa — el estado mental donde la intuición puede hablar más alto que el análisis.',
+          pasos:'Túmbate o siéntate cómodamente.\nCierra los ojos.\n\nInhala 5 tiempos · Retén 3 · Exhala 7 muy despacio.\nPausa 3.\n\nRepite 5 veces.\n\nAl terminar, sin abrir los ojos, pregúntate:\n«¿Hacia dónde apunta mi norte ahora mismo?»\n\nEscribe lo primero que llegue.',
+          patron:{i:5,r:3,e:7,p:3,c:5},
+          nota:'La intuición habla primero. El análisis viene después para verificar.'
+        },
+        pregunta:'Si solo pudieras llevarte una dirección de todos los caminos que ves, ¿cuál no podrías dejar atrás?',
+        pregNota:'No la más segura. La que no podrías abandonar sin sentir que te pierdes algo esencial.',
+        ejercicio:{
+          tag:'Test de la muerte',
+          color:'#5a8a3c',
+          texto:'Para cada opción que estás considerando, pregúntate:\n\n«Si en 10 años supiera que no lo intenté, ¿me arrepentiría?»\n\nNo es para angustiarte. Es para encontrar qué importa de verdad.\n\nLa opción que produce más arrepentimiento imaginado suele ser la que más quieres.'
+        },
+        journalPreg:'¿Qué sabes en el fondo que quieres hacer, aunque sea incómodo admitirlo?',
+        journalPlaceholder:'En el fondo, lo que sé que quiero es...',
+        semillas:['La opción que me produce más miedo y más curiosidad a la vez es...','Lo que sé que quiero pero me resisto a admitir es...','Si tuviera que explicarle mi norte a alguien en una frase, diría...','Lo que no podría no intentar sin sentir que me traiciono es...'],
+        musica:{nom:'Clarity — Meditation & Focus',url:'https://open.spotify.com/playlist/37i9dQZF1DX4sWSpwq3LiO'}
+      },
+      {
+        txt:'Hay algo que sé pero que todavía no quiero ver del todo.',
+        somatico:{
+          tag:'Meditación de la verdad',
+          color:'#5a8a3c',
+          titulo:'Lo que no quieres ver ya lo sabes. El cuerpo lo lleva guardado.',
+          por:'Resistir una verdad cuesta más energía que afrontarla. El cuerpo lleva el peso de lo que la mente no quiere ver. Este ejercicio crea el espacio seguro para que pueda salir.',
+          pasos:'Siéntate con la espalda recta.\nCierra los ojos.\n\nRespira con normalidad 2 minutos.\n\nDespués pregúntate en silencio:\n«¿Qué es lo que ya sé pero todavía no quiero admitir?»\n\nNo fuerces. Solo escucha.\nSi llega algo, no lo analices. Solo deja que esté.\n\nQuédate en silencio 5 minutos.',
+          patron:null,
+          nota:'No tienes que actuar sobre lo que aparezca. Solo necesitas verlo.'
+        },
+        pregunta:'¿Qué decisión llevas tiempo posponiendo porque sabes que cambiará muchas cosas?',
+        pregNota:'No tienes que tomarla ahora. Solo nombrarla.',
+        ejercicio:{
+          tag:'Nombrar lo que ya sabes',
+          color:'#5a8a3c',
+          texto:'Escribe esta frase y complétala sin pensar:\n\n«Lo que ya sé y todavía no quiero admitir es...»\n\nDespués escribe:\n\n«Y si lo admitiera, lo que cambiaría es...»\n\nY finalmente:\n\n«Lo que me da miedo de ese cambio es...»'
+        },
+        journalPreg:'¿Qué necesitarías para poder afrontar eso que ya sabes?',
+        journalPlaceholder:'Lo que ya sé aunque me cueste verlo es...',
+        semillas:['La verdad que llevo más tiempo evitando es...','Si me diera permiso para verlo del todo, lo que cambiaria primero es...','Lo que más me asusta de afrontar esa verdad es...','Lo que ganaría si dejara de evitarla es...'],
+        musica:{nom:'Inner Silence — Yin & Yoga',url:'https://open.spotify.com/playlist/37i9dQZF1DWZMCPgYjgDzU'}
+      }
+    ]
+  }
+];
+
+// ════════════════════════════════════════════════════════
+// ESTADO
+// ════════════════════════════════════════════════════════
+let visitados = [];
+let terr = null, caminoIdx = null;
+let fase = 'entrada'; // entrada | somatico | pregunta | ejercicio | journaling
+let respTimer = null, respCiclo = 0;
+
+// ════════════════════════════════════════════════════════
+// NAVEGACIÓN
+// ════════════════════════════════════════════════════════
+function ir(id){
+  document.querySelectorAll('.pantalla').forEach(p=>p.classList.remove('activa'));
+  const p=document.getElementById(id);
+  if(p){p.classList.add('activa');window.scrollTo(0,0);}
+}
+
+function abrirTerritorio(id){
+  pararResp();
+  terr=MAPA.find(t=>t.id===id);
+  caminoIdx=null; fase='entrada';
+  renderViaje(); ir('viaje');
+}
+
+function elegirCamino(idx){
+  caminoIdx=idx; fase='somatico';
+  renderViaje(); window.scrollTo(0,0);
+}
+
+function avanzar(){
+  pararResp();
+  const orden=['somatico','pregunta','ejercicio','journaling'];
+  const i=orden.indexOf(fase);
+  if(i<orden.length-1){fase=orden[i+1]; renderViaje(); window.scrollTo(0,0);}
+}
+
+function completar(){
+  pararResp();
+  if(!visitados.includes(terr.id)) visitados.push(terr.id);
+  renderMapa();
+  if(visitados.length>=MAPA.length) ir('tesoro');
+  else ir('mapa');
+}
+
+function reiniciar(){
+  visitados=[]; ir('mapa');
+}
+
+// ════════════════════════════════════════════════════════
+// RENDER MAPA
+// ════════════════════════════════════════════════════════
+function renderMapa(){
+  const sg=document.getElementById('semillas'); sg.innerHTML='';
+  MAPA.forEach((_,i)=>{
+    const s=document.createElement('div');
+    s.className='sem'+(i<visitados.length?' on':''); sg.appendChild(s);
+  });
+  const g=document.getElementById('elementos-grid'); g.innerHTML='';
+  MAPA.forEach(t=>{
+    const d=document.createElement('div');
+    d.className='elem-card'+(visitados.includes(t.id)?' visitada':'');
+    d.style.setProperty('--ec',t.color);
+    d.innerHTML=`<div class="ec-sim">${t.sim}</div><div class="ec-elem">${t.elem}</div><div class="ec-nom">${t.nom}</div><div class="ec-desc">${t.desc}</div>`;
+    d.onclick=()=>abrirTerritorio(t.id); g.appendChild(d);
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// RENDER VIAJE
+// ════════════════════════════════════════════════════════
+function renderViaje(){
+  const w=document.getElementById('step-wrap');
+  const t=terr;
+  const c=caminoIdx!==null?t.caminos[caminoIdx]:null;
+  const col=t.color;
+
+  const header=`
+    <button class="step-back" onclick="ir('mapa')">← volver al mapa</button>
+    <div class="step-elem" style="color:${col}">${t.elem} · ${t.arq}</div>
+    <div class="step-sim">${t.sim}</div>
+    <h2 class="step-h">${t.nom}</h2>
+  `;
+
+  if(fase==='entrada'){
+    let ops=t.caminos.map((cam,i)=>`
+      <button class="opcion" onclick="elegirCamino(${i})">
+        <span class="arr">→</span>${cam.txt}
+      </button>`).join('');
+    w.innerHTML=`${header}
+      <div class="raya"></div>
+      <div class="entrada-preg">${t.entradaPreg}</div>
+      <div class="opciones">${ops}</div>`;
+    return;
+  }
+
+  if(fase==='somatico'){
+    const s=c.somatico;
+    const tienePatron=s.patron!==null;
+    w.innerHTML=`${header}
+      <div class="raya"></div>
+      <div class="somatico-box">
+        <div class="somatico-tag" style="color:${col};border-color:${col}">${s.tag}</div>
+        <div class="somatico-titulo">${s.titulo}</div>
+        <div class="somatico-por">${s.por}</div>
+        <div class="somatico-pasos">${s.pasos}</div>
+        ${tienePatron?renderResp(s.patron,col):`
+          <div class="musica-box" style="border-color:${col}">
+            <div class="musica-label" style="color:${col}">Cuando estés lista</div>
+            <div class="musica-nom">Tómate el tiempo que necesites</div>
+          </div>`}
+        <p class="resp-nota">${s.nota}</p>
+      </div>
+      <div class="nav-abajo">
+        <button class="btn-sig" onclick="avanzar()">Continuar →</button>
+        <button class="step-back" onclick="ir('mapa')">← volver al mapa</button>
+      </div>`;
+    if(tienePatron) iniciarResp(s.patron);
+    return;
+  }
+
+  if(fase==='pregunta'){
+    w.innerHTML=`${header}
+      <div class="raya"></div>
+      <div class="musica-box" style="border-color:${col}">
+        <div class="musica-label" style="color:${col}">♪ Música sugerida para este momento</div>
+        <div class="musica-nom">${c.musica.nom}</div>
+        <div class="musica-link"><a href="${c.musica.url}" target="_blank">Abrir en Spotify →</a></div>
+      </div>
+      <p style="font-size:13px;color:var(--gris);font-style:italic;margin-bottom:24px">Pon la música. Cierra los ojos. Déjate estar.</p>
+      <div class="pregunta-central">${c.pregunta}</div>
+      <p class="pregunta-nota">${c.pregNota}</p>
+      <div class="nav-abajo">
+        <button class="btn-sig" onclick="avanzar()">Continuar →</button>
+      </div>`;
+    return;
+  }
+
+  if(fase==='ejercicio'){
+    w.innerHTML=`${header}
+      <div class="raya"></div>
+      <p style="font-style:italic;color:var(--gris-c);font-size:15px;margin-bottom:20px">La pregunta lleva dentro. Ahora dale una forma.</p>
+      <div class="ejercicio-box" style="border-color:${col};background:rgba(255,255,255,0.02)">
+        <div class="ejercicio-tag" style="color:${col}">${c.ejercicio.tag}</div>
+        <div class="ejercicio-texto">${c.ejercicio.texto}</div>
+      </div>
+      <div class="nav-abajo">
+        <button class="btn-sig" onclick="avanzar()">Pasar a escribir →</button>
+      </div>`;
+    return;
+  }
+
+  if(fase==='journaling'){
+    const seeds=c.semillas.map(s=>`<div class="journal-seed" onclick="usarSemilla('${s.replace(/'/g,"\\'")}')">${s}</div>`).join('');
+    w.innerHTML=`${header}
+      <div class="raya"></div>
+      <div class="journal-preg">${c.journalPreg}</div>
+      <textarea class="journal-area" id="jarea" placeholder="${c.journalPlaceholder}"></textarea>
+      <div class="journal-semillas">
+        <div class="journal-seed-label">Si te quedas en blanco, toca una frase:</div>
+        ${seeds}
+      </div>
+      <div class="nav-abajo">
+        <button class="btn-completar" onclick="completar()">Marcar territorio como recorrido</button>
+        <button class="step-back" onclick="ir('mapa')">← volver al mapa</button>
+      </div>`;
+    return;
+  }
+}
+
+function usarSemilla(s){
+  const ta=document.getElementById('jarea'); if(!ta)return;
+  const antes=ta.value; ta.value=antes+(antes&&!antes.endsWith('\n')?'\n\n':'')+s+'\n';
+  ta.focus();
+}
+
+// ════════════════════════════════════════════════════════
+// RESPIRACIÓN ANIMADA
+// ════════════════════════════════════════════════════════
+function renderResp(p,col){
+  const dots=Array.from({length:p.c},()=>'<div class="resp-dot"></div>').join('');
+  return `<div class="resp-centro">
+    <div class="resp-circulo" id="rc">●</div>
+    <div class="resp-label" id="rl">Pulsa para empezar</div>
+    <div class="resp-num" id="rn"></div>
+    <div class="resp-dots" id="rd">${dots}</div>
+    <button class="btn-sig" id="rb" style="border-color:${col};color:${col}" onclick="iniciarResp(${JSON.stringify(p).replace(/"/g,'&quot;')})">Comenzar</button>
+  </div>`;
+}
+
+function iniciarResp(p){
+  const rb=document.getElementById('rb'); if(rb)rb.style.display='none';
+  respCiclo=0; correrFase('inhala',p);
+}
+
+function correrFase(fase,p){
+  const rc=document.getElementById('rc');
+  const rl=document.getElementById('rl');
+  const rn=document.getElementById('rn');
+  if(!rc)return;
+  let dur,label,clase;
+  if(fase==='inhala'){dur=p.i;label='INHALA';clase='inhala';}
+  else if(fase==='retiene'){dur=p.r;label='RETÉN';clase='inhala';}
+  else if(fase==='exhala'){dur=p.e;label='EXHALA';clase='exhala';}
+  else{dur=p.p;label='PAUSA';clase='exhala';}
+  rc.className='resp-circulo '+clase; rc.textContent='●';
+  rl.textContent=label; rn.textContent=dur;
+  let t=dur;
+  respTimer=setInterval(()=>{
+    t--; if(t>0){rn.textContent=t;return;}
+    clearInterval(respTimer);
+    if(fase==='inhala') correrFase(p.r>0?'retiene':'exhala',p);
+    else if(fase==='retiene') correrFase('exhala',p);
+    else if(fase==='exhala'){
+      if(p.p>0) correrFase('pausa',p);
+      else siguienteCiclo(p);
+    } else siguienteCiclo(p);
+  },1000);
+}
+
+function siguienteCiclo(p){
+  respCiclo++;
+  const dots=document.querySelectorAll('.resp-dot');
+  dots.forEach((d,i)=>d.classList.toggle('hecho',i<respCiclo));
+  if(respCiclo>=p.c) terminarResp();
+  else correrFase('inhala',p);
+}
+
+function terminarResp(){
+  const rc=document.getElementById('rc');
+  const rl=document.getElementById('rl');
+  const rn=document.getElementById('rn');
+  if(rc){rc.className='resp-circulo';rc.textContent='✦';}
+  if(rl)rl.textContent='Completado';
+  if(rn)rn.textContent='';
+}
+
+function pararResp(){
+  if(respTimer){clearInterval(respTimer);respTimer=null;}
+}
+
+// ════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════
+window.onload=()=>{renderMapa();};
+</script>
+</body>
+</html>
